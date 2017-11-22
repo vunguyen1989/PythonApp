@@ -14,7 +14,7 @@ app.config['MYSQL_DATABASE_DB'] = 'BucketList'
 app.config['MYSQL_DATABASE_HOST'] = 'localhost'
 mysql.init_app(app)
 
-@app.route('/userHome')
+
 @app.route('/userHome')
 def userHome():
     if session.get('user'):
@@ -134,10 +134,49 @@ def getWish():
     try:
         if session.get('user'):
             _user = session.get('user')
+ 
+            con = mysql.connect()
+            cursor = con.cursor()
+            cursor.callproc('sp_GetWishByUser',(_user,))
+            wishes = cursor.fetchall()
+ 
+            wishes_dict = []
+            for wish in wishes:
+                wish_dict = {
+                        'Id': wish[0],
+                        'Title': wish[1],
+                        'Description': wish[2],
+                        'Date': wish[4]}
+                wishes_dict.append(wish_dict)
+ 
+            return json.dumps(wishes_dict)
         else:
             return render_template('error.html', error = 'Unauthorized Access')
     except Exception as e:
         return render_template('error.html', error = str(e))
+       
+@app.route('/getWishById',methods=['POST'])
+def getWishById():
+    try:
+        if session.get('user'):
+ 
+            _id = request.form['id']
+            _user = session.get('user')
+ 
+            conn = mysql.connect()
+            cursor = conn.cursor()
+            cursor.callproc('sp_GetWishById',(_id,_user))
+            result = cursor.fetchall()
+ 
+            wish = []
+            wish.append({'Id':result[0][0],'Title':result[0][1],'Description':result[0][2]})
+ 
+            return json.dumps(wish)
+        else:
+            return render_template('error.html', error = 'Unauthorized Access')
+    except Exception as e:
+        return render_template('error.html',error = str(e))
+
         
 if __name__ == "__main__":
     app.run()
